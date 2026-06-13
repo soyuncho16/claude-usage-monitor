@@ -87,3 +87,28 @@ def next_interval(state, now):
         if 0 < remain <= FAST_WINDOW_S:
             return FAST_S
     return NORMAL_S
+
+
+class PollScheduler:
+    """폴링 시각 결정 로직 — rumps 없이 단위 테스트한다.
+
+    GUI 셸은 스레드/타이머 기계만 담당하고 '언제 다음 폴링인가'는 이 순수 객체가 정한다.
+    핵심: 다음 폴링 시각은 폴 결과를 수거한 직후(on_result) **최신 state** 기준으로
+    잡아야 '리셋 30분 전부터 1분' 같은 주기 전환이 즉시 반영된다 — 폴 시작 전의
+    오래된/빈 state로 잡으면 전환이 한 사이클 늦는다.
+    """
+
+    def __init__(self):
+        self.next_poll_at = 0  # 시작 즉시 1회 폴링
+
+    def should_poll(self, now, polling):
+        """지금 폴링을 시작할지. polling: worker가 실행 중인지."""
+        return now >= self.next_poll_at and not polling
+
+    def on_result(self, state, now):
+        """폴 결과 수거 직후 — 최신 state 기준으로 다음 폴링 시각을 잡는다."""
+        self.next_poll_at = now + next_interval(state, now)
+
+    def request_now(self):
+        """수동 '지금 갱신' — 다음 틱에서 즉시 폴링."""
+        self.next_poll_at = 0

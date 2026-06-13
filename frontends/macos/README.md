@@ -8,7 +8,8 @@ macOS 메뉴바 앱. 메뉴바에 `🟢 47% · 3h12m`(상태 이모지 + 5시간
 
 ```bash
 pip install -r requirements.txt
-python claude_usage_menubar.py     # repo 루트에서 실행해도 됨 (core를 자동 import)
+python claude_usage_menubar.py
+# repo 루트에서는: python frontends/macos/claude_usage_menubar.py (core를 자동 import)
 ```
 
 ## 번들 빌드

@@ -99,5 +99,33 @@ class TestNextInterval(unittest.TestCase):
         self.assertEqual(d.next_interval(None, NOW), d.NORMAL_S)
 
 
+class TestPollScheduler(unittest.TestCase):
+    def test_starts_due_immediately(self):
+        self.assertTrue(d.PollScheduler().should_poll(NOW, polling=False))
+
+    def test_not_polling_while_worker_alive(self):
+        # 폴링 시각이 지났어도 worker가 실행 중이면 중복 폴링하지 않는다
+        self.assertFalse(d.PollScheduler().should_poll(NOW, polling=True))
+
+    def test_normal_interval_after_result(self):
+        s = d.PollScheduler()
+        s.on_result(st(five_h={"utilization": 10, "resets_at": NOW + 4 * 3600}), NOW)
+        self.assertFalse(s.should_poll(NOW + d.NORMAL_S - 1, polling=False))
+        self.assertTrue(s.should_poll(NOW + d.NORMAL_S, polling=False))
+
+    def test_fast_interval_when_first_result_in_window(self):
+        # 회귀: 첫 poll 결과가 리셋 30분 이내면 다음 폴링은 (10분이 아니라) 1분 뒤여야 한다
+        s = d.PollScheduler()
+        s.on_result(st(five_h={"utilization": 90, "resets_at": NOW + 600}), NOW)
+        self.assertEqual(s.next_poll_at, NOW + d.FAST_S)
+
+    def test_request_now_makes_due(self):
+        s = d.PollScheduler()
+        s.on_result(st(five_h={"utilization": 10, "resets_at": NOW + 4 * 3600}), NOW)
+        self.assertFalse(s.should_poll(NOW, polling=False))  # 방금 NORMAL 간격 잡힘
+        s.request_now()
+        self.assertTrue(s.should_poll(NOW, polling=False))
+
+
 if __name__ == "__main__":
     unittest.main()
