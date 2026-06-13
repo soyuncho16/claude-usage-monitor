@@ -61,7 +61,8 @@ public sealed class TrayContext : ApplicationContext
     private void LaunchPoll(long now)
     {
         _nextPollAt = now + Display.NextInterval(_state, now);
-        if (!File.Exists(_coreExe)) return;   // 코어 exe 미동봉 → 조용히 스킵
+        if (!File.Exists(_coreExe)) return;   // 코어 exe 미동봉 → 스킵(Render가 툴팁/메뉴로 안내)
+        _pollProc?.Dispose();                 // 직전(이미 종료된) process handle 정리 후 교체
         try
         {
             var proc = Process.Start(new ProcessStartInfo(_coreExe)
@@ -106,10 +107,16 @@ public sealed class TrayContext : ApplicationContext
         oldIcon?.Dispose();
         if (oldHicon != IntPtr.Zero) DestroyIcon(oldHicon);  // FromHandle은 HICON을 소유 안 함
 
-        _icon.Text = Truncate(Display.Tooltip(_state, now), 127);  // NotifyIcon.Text 한도
+        // 코어 exe가 앱 옆에 없으면 폴링이 영영 안 된다 — 조용히 두지 않고 명시한다.
+        var coreMissing = !File.Exists(_coreExe);
+        _icon.Text = Truncate(coreMissing
+            ? "Claude Usage — claude-usage-core.exe 없음 (앱 옆에 두세요)"
+            : Display.Tooltip(_state, now), 127);  // NotifyIcon.Text 한도
         _row5h.Text = Display.Menu5h(_state, now);
         _row7d.Text = Display.Menu7d(_state);
-        _rowMeta.Text = Display.MenuMeta(_state, now);
+        _rowMeta.Text = coreMissing
+            ? "코어 미동봉: claude-usage-core.exe 없음"
+            : Display.MenuMeta(_state, now);
     }
 
     private static string Truncate(string s, int max) => s.Length <= max ? s : s[..max];
@@ -119,6 +126,9 @@ public sealed class TrayContext : ApplicationContext
         if (disposing)
         {
             _timer.Dispose();
+            try { if (_pollProc is { HasExited: false }) _pollProc.Kill(); }
+            catch { /* 이미 종료됨 */ }
+            _pollProc?.Dispose();
             _icon.Visible = false;
             var hicon = _lastHicon;
             _icon.Icon?.Dispose();

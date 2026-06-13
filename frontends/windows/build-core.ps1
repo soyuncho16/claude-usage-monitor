@@ -1,5 +1,5 @@
 # build-core.ps1 — 공유 코어를 단일 exe로 동결 (Windows에서 실행)
-#   pip install pyinstaller
+#   pip install -r requirements-build.txt   # pyinstaller 버전 고정
 #   ./build-core.ps1
 $ErrorActionPreference = "Stop"
 $core = Join-Path $PSScriptRoot "..\..\core\claude_usage_core.py"
