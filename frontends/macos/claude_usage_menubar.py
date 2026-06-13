@@ -38,7 +38,7 @@ class ClaudeUsageApp(rumps.App):
         self._pending = None
         self._lock = threading.Lock()
         self._worker = None
-        self._next_poll_at = 0  # 시작 즉시 1회 폴링
+        self._sched = disp.PollScheduler()  # next_poll_at=0 → 시작 즉시 1회 폴링
         self._render()
         self._timer = rumps.Timer(self._on_tick, TICK_S)
         self._timer.start()
@@ -46,15 +46,16 @@ class ClaudeUsageApp(rumps.App):
     def _on_tick(self, _timer):
         now = int(time.time())
         with self._lock:
-            if self._pending is not None:
-                self._state = self._pending
-                self._pending = None
-        if now >= self._next_poll_at and (self._worker is None or not self._worker.is_alive()):
+            pending, self._pending = self._pending, None
+        if pending is not None:
+            self._state = pending
+            self._sched.on_result(self._state, now)  # 최신 state 기준 다음 폴링 시각 재계산
+        polling = self._worker is not None and self._worker.is_alive()
+        if self._sched.should_poll(now, polling):
             self._launch_poll(now)
         self._render()
 
     def _launch_poll(self, now):
-        self._next_poll_at = now + disp.next_interval(self._state, now)
         self._worker = threading.Thread(target=self._poll_worker, daemon=True)
         self._worker.start()
 
@@ -66,7 +67,7 @@ class ClaudeUsageApp(rumps.App):
             self._pending = state
 
     def on_refresh(self, _sender):
-        self._next_poll_at = 0  # 다음 틱에서 즉시 폴링
+        self._sched.request_now()  # 다음 틱에서 즉시 폴링
 
     def _render(self):
         now = int(time.time())
