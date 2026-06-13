@@ -210,13 +210,18 @@ def fetch_headers(token):
 
 
 def poll_once(now, dump_headers=False):
-    """1회 폴링 후 항상 state dict를 반환한다(예외를 던지지 않음).
+    """1회 폴링 후 state dict를 반환한다.
+
+    PollerError(인증·네트워크·파싱)는 error_state로 변환해 반환한다 — raise하지 않는다.
+    단, write_state의 OSError 등 그 외 예외는 **의도적으로 전파**한다: 캐시 쓰기 실패는
+    시스템 이상이라 CLI는 traceback으로 진단하는 게 낫고, 이전 state.json도 보존된다.
+    따라서 GUI 스레드에서 호출하는 in-process 프론트엔드(macOS worker)는 절대 raise하지
+    않는 poll_once_safe()를 써서 worker가 조용히 죽지 않게 해야 한다.
 
     성공: 헤더 파싱 후 write_state. 429면 error에 rate_limited 주입(ok는 True 유지).
-    실패: error_state를 직전 값 위에 써서 반환(ok False).
+    PollerError: error_state를 직전 값 위에 써서 반환(ok False).
 
-    frontends/macos는 이 함수를 import해 백그라운드 스레드에서 호출하고,
-    CLI(main)와 spawn 기반 프론트엔드(GNOME/Windows)는 main을 통해 호출한다.
+    spawn 기반 프론트엔드(GNOME/Windows)와 CLI는 main을 통해 호출한다.
     """
     try:
         token = read_token(now)
@@ -234,6 +239,24 @@ def poll_once(now, dump_headers=False):
         state = error_state(e, load_prev(), now)
         write_state(state)
         return state
+
+
+def poll_once_safe(now, prev):
+    """poll_once를 감싸 **어떤 예외도** state로 변환한다 — 절대 raise하지 않는다.
+
+    poll_once는 PollerError만 state로 바꾸고 write_state OSError 등은 전파한다.
+    in-process GUI 프론트엔드(macOS worker)는 스레드가 조용히 죽으면 메뉴바가 영영
+    갱신되지 않으므로 이 래퍼를 쓴다. 전파된 예외는 prev 값을 보존한 error_state로
+    변환해 '오래된 값 + 오류'로 표시되게 한다.
+
+    Args:
+        now: 현재 unix epoch(초).
+        prev: 직전 state(없으면 None) — 전파 예외 시 표시값 보존에 사용.
+    """
+    try:
+        return poll_once(now)
+    except Exception as e:
+        return error_state(PollerError("internal", f"poll 실패: {e}"), prev, now)
 
 
 def main(argv):

@@ -51,5 +51,38 @@ class TestPollOnce(unittest.TestCase):
         self.assertEqual(state["five_h"]["utilization"], 47)  # 직전 값 보존
 
 
+class TestPollOnceSafe(unittest.TestCase):
+    """in-process GUI worker용 래퍼: 어떤 예외도 state로 변환(절대 raise 안 함)."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        d = os.path.join(self._tmp.name, "claude-usage")
+        self._p1 = mock.patch.object(core, "STATE_DIR", d)
+        self._p2 = mock.patch.object(core, "STATE_PATH", os.path.join(d, "state.json"))
+        self._p1.start(); self._p2.start()
+
+    def tearDown(self):
+        self._p1.stop(); self._p2.stop(); self._tmp.cleanup()
+
+    def test_passes_through_success(self):
+        with mock.patch.object(core, "read_token", return_value="tok"), \
+             mock.patch.object(core, "fetch_headers", return_value=(H, 200)):
+            state = core.poll_once_safe(NOW, None)
+        self.assertTrue(state["ok"])
+        self.assertEqual(state["five_h"]["utilization"], 47)
+
+    def test_write_state_oserror_becomes_error_state_not_raise(self):
+        # poll_once는 write_state OSError를 전파한다; poll_once_safe는 그것을 삼켜
+        # prev 값을 보존한 error_state로 변환해야 한다 (worker가 죽지 않음).
+        prev = core.parse_state(H, NOW)
+        with mock.patch.object(core, "read_token", return_value="tok"), \
+             mock.patch.object(core, "fetch_headers", return_value=(H, 200)), \
+             mock.patch.object(core, "write_state", side_effect=OSError("disk full")):
+            state = core.poll_once_safe(NOW + 60, prev)
+        self.assertFalse(state["ok"])
+        self.assertEqual(state["error"]["type"], "internal")
+        self.assertEqual(state["five_h"]["utilization"], 47)  # prev 값 보존
+
+
 if __name__ == "__main__":
     unittest.main()

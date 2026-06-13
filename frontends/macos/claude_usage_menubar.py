@@ -60,7 +60,8 @@ class ClaudeUsageApp(rumps.App):
 
     def _poll_worker(self):
         # 네트워크 호출은 여기(백그라운드)에서만 — 메뉴바를 멈추지 않는다.
-        state = core.poll_once(int(time.time()))
+        # poll_once_safe는 어떤 예외도 state로 변환하므로 worker가 조용히 죽지 않는다.
+        state = core.poll_once_safe(int(time.time()), self._state)
         with self._lock:
             self._pending = state
 
