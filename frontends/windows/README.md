@@ -10,7 +10,7 @@ spawn해 `%LOCALAPPDATA%\claude-usage\state.json`을 읽는다(10분 주기, 리
 
 ```powershell
 # 1) 공유 코어를 exe로 동결
-pip install pyinstaller
+pip install -r requirements-build.txt
 ./build-core.ps1
 
 # 2) 트레이 앱 publish (단일 파일, 자체 포함)
