@@ -1,0 +1,12 @@
+{
+  "name": "claude-usage-monitor-gnome",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GNOME 45+ frontend lint tooling",
+  "scripts": {
+    "lint": "eslint extension.js"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  }
+}
