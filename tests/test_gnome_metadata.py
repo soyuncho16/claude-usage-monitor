@@ -16,7 +16,6 @@ class TestGnomeMetadata(unittest.TestCase):
         with open(META) as f:
             m = json.load(f)
         self.assertEqual(m["uuid"], "claude-usage-monitor@soyuncho16.github.io")
-        self.assertNotIn("whth", m["uuid"])  # 개인 repo의 whth.local 잔재 금지
 
     def test_targets_45_through_50(self):
         with open(META) as f:
