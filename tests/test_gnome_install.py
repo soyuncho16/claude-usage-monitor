@@ -24,7 +24,10 @@ class TestGnomeInstall(unittest.TestCase):
         # install.sh가 $HERE/<file>로 복사하는 프론트엔드 파일은 모두 실재해야 한다
         # (확장자 있는 파일명만 — `$HERE/../..` 같은 경로 토큰은 제외)
         names = re.findall(r"\$HERE/([\w-]+\.\w+)", self.script)
-        self.assertIn("extension.js", names)
+        # 런타임에 반드시 필요한 프론트엔드 파일은 install.sh가 하나라도 빠뜨리면 안 된다
+        for required in ("extension.js", "metadata.json", "stylesheet.css"):
+            self.assertIn(required, names,
+                          f"install.sh가 런타임 필수 파일 {required}을(를) 복사하지 않음")
         for name in names:
             self.assertTrue(
                 os.path.isfile(os.path.join(GNOME, name)),
