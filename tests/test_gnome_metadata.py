@@ -18,10 +18,11 @@ class TestGnomeMetadata(unittest.TestCase):
         self.assertEqual(m["uuid"], "claude-usage-monitor@soyuncho16.github.io")
         self.assertNotIn("whth", m["uuid"])  # 개인 repo의 whth.local 잔재 금지
 
-    def test_targets_45_through_48(self):
+    def test_targets_45_through_50(self):
         with open(META) as f:
             m = json.load(f)
-        self.assertEqual(m["shell-version"], ["45", "46", "47", "48"])
+        # 45부터 현재 출시된 최신 셸(50)까지 — GNOME 49/50 로드 거부 방지
+        self.assertEqual(m["shell-version"], ["45", "46", "47", "48", "49", "50"])
 
 
 if __name__ == "__main__":

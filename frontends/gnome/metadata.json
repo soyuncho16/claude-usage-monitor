@@ -2,7 +2,7 @@
   "uuid": "claude-usage-monitor@soyuncho16.github.io",
   "name": "Claude Usage Monitor",
   "description": "Shows your Claude subscription 5-hour usage window (utilization % and time until reset) in the top panel.",
-  "shell-version": ["45", "46", "47", "48"],
+  "shell-version": ["45", "46", "47", "48", "49", "50"],
   "url": "https://github.com/soyuncho16/claude-usage-monitor",
   "version": 1
 }
