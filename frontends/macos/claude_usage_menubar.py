@@ -55,10 +55,10 @@ class ClaudeUsageApp(rumps.App):
             self._sched.on_result(self._state, now)  # 최신 state 기준 다음 폴링 시각 재계산
         polling = self._worker is not None and self._worker.is_alive()
         if self._sched.should_poll(now, polling):
-            self._launch_poll(now)
+            self._launch_poll()
         self._render()
 
-    def _launch_poll(self, now):
+    def _launch_poll(self):
         self._worker = threading.Thread(target=self._poll_worker, daemon=True)
         self._worker.start()
 
@@ -80,9 +80,16 @@ class ClaudeUsageApp(rumps.App):
         self.row_meta.title = disp.menu_meta(self._state, now)
 
 
-def main():
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if "--check" in argv:
+        # 번들 스모크: 여기 도달했다는 건 상단의 rumps/core/usage_display import가 모두
+        # 성공했다는 뜻 — py2app 번들에서 모듈이 빠지면 이 줄 전에 죽는다. GUI는 띄우지 않는다.
+        print("claude-usage-monitor bundle ok")
+        return 0
     ClaudeUsageApp().run()
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

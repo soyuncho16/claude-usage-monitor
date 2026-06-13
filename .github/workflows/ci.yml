@@ -41,6 +41,10 @@ jobs:
         run: |
           pip install -r requirements.txt
           python setup.py py2app
-      - name: Assert the .app bundle exists
+      - name: Smoke-check the bundle (executable runs, bundled imports resolve)
         working-directory: frontends/macos
-        run: test -d "dist/Claude Usage Monitor.app"
+        run: |
+          APP="dist/Claude Usage Monitor.app"
+          test -d "$APP"
+          EXE=$(plutil -extract CFBundleExecutable raw "$APP/Contents/Info.plist")
+          "$APP/Contents/MacOS/$EXE" --check
