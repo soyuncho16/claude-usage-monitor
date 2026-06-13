@@ -42,6 +42,9 @@ class ClaudeUsageApp(rumps.App):
         self._render()
         self._timer = rumps.Timer(self._on_tick, TICK_S)
         self._timer.start()
+        # rumps.Timer는 TICK_S 뒤에야 처음 발화한다 — 시작 즉시 1회 폴링하도록 한 틱 직접 돌린다
+        # (PollScheduler.next_poll_at=0이라 should_poll이 바로 True → _launch_poll).
+        self._on_tick(None)
 
     def _on_tick(self, _timer):
         now = int(time.time())
