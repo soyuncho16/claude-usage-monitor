@@ -119,6 +119,14 @@ class TestCacheDir(unittest.TestCase):
                 poller._cache_dir(),
                 os.path.join(r"C:\Users\u\AppData\Local", "claude-usage"))
 
+    def test_windows_localappdata_absent_fallback(self):
+        env = {k: v for k, v in poller.os.environ.items() if k != "LOCALAPPDATA"}
+        with mock.patch.object(poller.os, "name", "nt"), \
+             mock.patch.dict(poller.os.environ, env, clear=True):
+            self.assertEqual(
+                poller._cache_dir(),
+                os.path.join(os.path.expanduser(r"~\AppData\Local"), "claude-usage"))
+
 
 def _http_error(code, headers):
     import email.message
