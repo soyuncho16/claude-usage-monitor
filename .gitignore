@@ -2,3 +2,11 @@ __pycache__/
 *.pyc
 *.tmp
 node_modules/
+# .NET (Windows frontend)
+bin/
+obj/
+# PyInstaller / publish output (Windows frontend)
+frontends/windows/dist/
+frontends/windows/build/
+frontends/windows/publish/
+*.spec
