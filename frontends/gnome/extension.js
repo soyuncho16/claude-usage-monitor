@@ -60,7 +60,7 @@ class Indicator extends PanelMenu.Button {
         try {
             const [ok, bytes] = GLib.file_get_contents(STATE_PATH);
             this._state = ok ? JSON.parse(new TextDecoder().decode(bytes)) : null;
-        } catch (e) {
+        } catch {
             this._state = null; // 파일 없음/깨짐 → 첫 실행 표시
         }
     }
@@ -143,7 +143,7 @@ class Indicator extends PanelMenu.Button {
         try {
             proc = Gio.Subprocess.new(
                 ['python3', this._poller], Gio.SubprocessFlags.NONE);
-        } catch (e) {
+        } catch {
             this._loadState();
             this._render();
             this._schedule();
