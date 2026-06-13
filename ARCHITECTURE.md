@@ -54,7 +54,7 @@ network | rate_limited | parse`), 직전 성공 값은 보존.
 | --- | --- | --- | --- |
 | Linux GNOME 42 | GJS 레거시 | 동작(별 repo) | 작성자 실기 검증 완료 |
 | Linux GNOME 45+ | GJS ESM | 동작(정적/CI 검증) | ESLint + 메타데이터·설치 테스트 + CI (45 실기 없음) |
-| macOS 메뉴바 | Swift 또는 rumps (미정) | 예정 | CI 빌드만 (Mac 실기 없음) |
+| macOS 메뉴바 | Python rumps + py2app | 동작(빌드/CI), 런타임 미검증 | 표시·주기·코어 단위 테스트 + CI macOS 빌드 (Mac 실기 없음) |
 | Windows 트레이 | C#/.NET 또는 pystray (미정) | 예정 | 작성자 Windows 실기 검증 |
 
 > GNOME 42 원본은 작성자 개인 repo(private)에 있고, 이 repo는 배포용으로 GNOME 45+를
@@ -69,5 +69,5 @@ network | rate_limited | parse`), 직전 성공 값은 보존.
 
 1. 공유 코어 추출 + OS 경로 추상화 + 테스트 — 완료
 2. GNOME 45+ ESM 포팅 — 완료 (정적/CI 검증; shell-version 45–50)
-3. macOS 메뉴바 앱
+3. macOS 메뉴바 앱 — 완료 (rumps; 표시·코어 단위 테스트 + CI 빌드, 런타임 미검증)
 4. Windows 트레이 앱
