@@ -26,5 +26,5 @@ jobs:
       - name: Lint GNOME extension.js
         working-directory: frontends/gnome
         run: |
-          npm install
+          npm ci
           npm run lint
