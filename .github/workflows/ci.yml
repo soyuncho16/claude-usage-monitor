@@ -28,3 +28,23 @@ jobs:
         run: |
           npm ci
           npm run lint
+
+  macos-build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Build the menu bar app bundle
+        working-directory: frontends/macos
+        run: |
+          pip install -r requirements.txt
+          python setup.py py2app
+      - name: Smoke-check the bundle (executable runs, bundled imports resolve)
+        working-directory: frontends/macos
+        run: |
+          APP="dist/Claude Usage Monitor.app"
+          test -d "$APP"
+          EXE=$(plutil -extract CFBundleExecutable raw "$APP/Contents/Info.plist")
+          "$APP/Contents/MacOS/$EXE" --check

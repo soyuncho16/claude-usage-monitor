@@ -209,15 +209,24 @@ def fetch_headers(token):
         raise PollerError("network", str(getattr(e, "reason", e)))
 
 
-def main(argv):
-    # write_state의 OSError는 의도적으로 전파한다 — ~/.cache 쓰기 실패는
-    # 시스템 이상이며, traceback 그대로가 진단에 유리. 이전 state.json은
-    # 쓰기 실패 시 그대로 남으므로 데이터 손실도 없다.
-    now = int(time.time())
+def poll_once(now, dump_headers=False):
+    """1회 폴링 후 state dict를 반환한다.
+
+    PollerError(인증·네트워크·파싱)는 error_state로 변환해 반환한다 — raise하지 않는다.
+    단, write_state의 OSError 등 그 외 예외는 **의도적으로 전파**한다: 캐시 쓰기 실패는
+    시스템 이상이라 CLI는 traceback으로 진단하는 게 낫고, 이전 state.json도 보존된다.
+    따라서 GUI 스레드에서 호출하는 in-process 프론트엔드(macOS worker)는 절대 raise하지
+    않는 poll_once_safe()를 써서 worker가 조용히 죽지 않게 해야 한다.
+
+    성공: 헤더 파싱 후 write_state. 429면 error에 rate_limited 주입(ok는 True 유지).
+    PollerError: error_state를 직전 값 위에 써서 반환(ok False).
+
+    spawn 기반 프론트엔드(GNOME/Windows)와 CLI는 main을 통해 호출한다.
+    """
     try:
         token = read_token(now)
         headers, status = fetch_headers(token)
-        if "--dump-headers" in argv:
+        if dump_headers:
             print(f"# HTTP {status}", file=sys.stderr)
             for k in sorted(headers):
                 print(f"{k}: {headers[k]}", file=sys.stderr)
@@ -225,11 +234,41 @@ def main(argv):
         if status == 429:
             state["error"] = {"type": "rate_limited", "message": "HTTP 429"}
         write_state(state)
-        return 0
+        return state
     except PollerError as e:
-        write_state(error_state(e, load_prev(), now))
-        print(f"error[{e.etype}]: {e}", file=sys.stderr)
+        state = error_state(e, load_prev(), now)
+        write_state(state)
+        return state
+
+
+def poll_once_safe(now, prev):
+    """poll_once를 감싸 **어떤 예외도** state로 변환한다 — 절대 raise하지 않는다.
+
+    poll_once는 PollerError만 state로 바꾸고 write_state OSError 등은 전파한다.
+    in-process GUI 프론트엔드(macOS worker)는 스레드가 조용히 죽으면 메뉴바가 영영
+    갱신되지 않으므로 이 래퍼를 쓴다. 전파된 예외는 prev 값을 보존한 error_state로
+    변환해 '오래된 값 + 오류'로 표시되게 한다.
+
+    Args:
+        now: 현재 unix epoch(초).
+        prev: 직전 state(없으면 None) — 전파 예외 시 표시값 보존에 사용.
+    """
+    try:
+        return poll_once(now)
+    except Exception as e:
+        return error_state(PollerError("internal", f"poll 실패: {e}"), prev, now)
+
+
+def main(argv):
+    # write_state의 OSError는 의도적으로 전파한다 — 캐시 쓰기 실패는 시스템 이상이며
+    # traceback 그대로가 진단에 유리. 이전 state.json은 보존되어 데이터 손실도 없다.
+    now = int(time.time())
+    state = poll_once(now, dump_headers=("--dump-headers" in argv))
+    if not state.get("ok"):
+        err = state.get("error") or {}
+        print(f"error[{err.get('type')}]: {err.get('message')}", file=sys.stderr)
         return 1
+    return 0  # 429(rate_limited)는 ok=True라 0을 반환 — 기존 동작 보존
 
 
 if __name__ == "__main__":
