@@ -64,20 +64,24 @@ public sealed class TrayContext : ApplicationContext
         if (!File.Exists(_coreExe)) return;   // 코어 exe 미동봉 → 조용히 스킵
         try
         {
-            _pollProc = Process.Start(new ProcessStartInfo(_coreExe)
+            var proc = Process.Start(new ProcessStartInfo(_coreExe)
             {
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WindowStyle = ProcessWindowStyle.Hidden,
             });
-            if (_pollProc is not null)
+            _pollProc = proc;
+            if (proc is not null)
             {
-                _pollProc.EnableRaisingEvents = true;
+                // guard는 이 호출이 띄운 process(started)만 종료한다 — 필드(_pollProc)를
+                // 잡으면 빠른 첫 poll + 수동 갱신 경합 시 다음 poll을 죽일 수 있다.
+                Process started = proc;
+                started.EnableRaisingEvents = true;
                 var guard = new System.Windows.Forms.Timer { Interval = PollGuardMs };
                 guard.Tick += (_, _) =>
                 {
                     guard.Stop(); guard.Dispose();
-                    try { if (_pollProc is { HasExited: false }) _pollProc.Kill(); }
+                    try { if (!started.HasExited) started.Kill(); }
                     catch { /* 이미 종료됨 */ }
                 };
                 guard.Start();
