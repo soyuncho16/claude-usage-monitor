@@ -57,7 +57,6 @@ class TestGnomeInstall(unittest.TestCase):
         self.assertEqual(uuid, m["uuid"])
 
 
-@unittest.skipIf(os.name == "nt", "install.sh는 POSIX 셸 스크립트 (Windows 미해당)")
 @unittest.skipUnless(shutil.which("bash"), "bash가 있어야 install.sh를 실행한다")
 class TestGnomeStagedInstall(unittest.TestCase):
     """install.sh를 임시 HOME에 실제로 실행해 설치 결과를 검증한다.

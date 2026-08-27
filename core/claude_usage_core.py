@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Claude 구독 사용량 폴러 — 응답 헤더의 unified 사용량을 state.json에 쓴다.
 
-크로스플랫폼 공유 코어. 프론트엔드(GNOME/macOS/Windows)는 이 스크립트를 spawn하고
-state.json을 읽는다 — 인터페이스는 state.json 파일 하나뿐.
+공유 코어. 프론트엔드(GNOME 확장)는 이 스크립트를 spawn하고 state.json을 읽는다.
+인터페이스는 state.json 파일 하나뿐.
 """
 import json
 import os
@@ -13,20 +13,12 @@ import urllib.error
 import urllib.request
 from datetime import datetime
 
-# 자격증명 경로는 expanduser가 세 OS 모두에서 올바른 홈을 잡는다
-# (Windows는 %USERPROFILE%\.claude\.credentials.json, 슬래시도 동작).
 CRED_PATH = os.path.expanduser("~/.claude/.credentials.json")
 
 
 def _cache_dir():
-    """OS 관례에 맞는 사용자 캐시 디렉토리 + claude-usage 하위."""
-    if os.name == "nt":  # Windows
-        base = os.environ.get("LOCALAPPDATA") or os.path.expanduser(
-            r"~\AppData\Local")
-    elif sys.platform == "darwin":  # macOS
-        base = os.path.expanduser("~/Library/Caches")
-    else:  # Linux/기타
-        base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
+    """XDG 사용자 캐시 디렉토리(기본 ~/.cache) + claude-usage 하위."""
+    base = os.environ.get("XDG_CACHE_HOME") or os.path.expanduser("~/.cache")
     return os.path.join(base, "claude-usage")
 
 
@@ -215,13 +207,13 @@ def poll_once(now, dump_headers=False):
     PollerError(인증·네트워크·파싱)는 error_state로 변환해 반환한다 — raise하지 않는다.
     단, write_state의 OSError 등 그 외 예외는 **의도적으로 전파**한다: 캐시 쓰기 실패는
     시스템 이상이라 CLI는 traceback으로 진단하는 게 낫고, 이전 state.json도 보존된다.
-    따라서 GUI 스레드에서 호출하는 in-process 프론트엔드(macOS worker)는 절대 raise하지
-    않는 poll_once_safe()를 써서 worker가 조용히 죽지 않게 해야 한다.
+    코어를 import해 스레드에서 직접 호출하는 쪽은 절대 raise하지 않는 poll_once_safe()를
+    써서 스레드가 조용히 죽지 않게 해야 한다.
 
     성공: 헤더 파싱 후 write_state. 429면 error에 rate_limited 주입(ok는 True 유지).
     PollerError: error_state를 직전 값 위에 써서 반환(ok False).
 
-    spawn 기반 프론트엔드(GNOME/Windows)와 CLI는 main을 통해 호출한다.
+    spawn 기반 프론트엔드(GNOME)와 CLI는 main을 통해 호출한다.
     """
     try:
         token = read_token(now)
@@ -245,8 +237,8 @@ def poll_once_safe(now, prev):
     """poll_once를 감싸 **어떤 예외도** state로 변환한다 — 절대 raise하지 않는다.
 
     poll_once는 PollerError만 state로 바꾸고 write_state OSError 등은 전파한다.
-    in-process GUI 프론트엔드(macOS worker)는 스레드가 조용히 죽으면 메뉴바가 영영
-    갱신되지 않으므로 이 래퍼를 쓴다. 전파된 예외는 prev 값을 보존한 error_state로
+    코어를 import해 백그라운드 스레드에서 돌리는 호출자는 스레드가 조용히 죽으면 표시가
+    영영 갱신되지 않으므로 이 래퍼를 쓴다. 전파된 예외는 prev 값을 보존한 error_state로
     변환해 '오래된 값 + 오류'로 표시되게 한다.
 
     Args:

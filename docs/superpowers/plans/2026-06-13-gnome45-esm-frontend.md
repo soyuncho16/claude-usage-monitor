@@ -549,7 +549,7 @@ git commit -m "feat(gnome): add install script and rewrite README"
 
 - Create: `.github/workflows/ci.yml`
 
-This workflow is created here and **extended by the macOS and Windows plans** (each adds a job). For now it runs the Python core tests, validates the GNOME metadata, and lints `extension.js`.
+This workflow runs the Python core tests, validates the GNOME metadata, and lints `extension.js`.
 
 - [ ] **Step 1: Write ci.yml**
 
